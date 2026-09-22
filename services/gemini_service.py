@@ -89,6 +89,7 @@ class GeminiService:
         approved_test_cases,
         discovery_data,
         testing_mode,
+        repair_feedback=None,
     ):
         prompt = self._read_prompt("test_script_prompt.txt")
         prompt = prompt.replace("{base_url}", base_url)
@@ -100,6 +101,10 @@ class GeminiService:
         prompt = prompt.replace(
             "{discovery_data}",
             json.dumps(discovery_data, indent=2),
+        )
+        prompt = prompt.replace(
+            "{repair_feedback}",
+            repair_feedback or "No previous execution failure. Generate the initial script.",
         )
 
         response = self.client.models.generate_content(

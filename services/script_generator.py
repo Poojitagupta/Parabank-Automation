@@ -14,28 +14,36 @@ class ScriptGenerator:
     def __init__(self, gemini_service: GeminiService):
         self.gemini_service = gemini_service
 
-    def generate(self, base_url, test_cases, discovery_data, testing_mode):
+    def generate(
+        self,
+        base_url,
+        test_cases,
+        discovery_data,
+        testing_mode,
+        repair_feedback=None,
+    ):
         scripts = self.gemini_service.generate_test_scripts(
             base_url=base_url,
             approved_test_cases=test_cases,
             discovery_data=discovery_data,
             testing_mode=testing_mode,
+            repair_feedback=repair_feedback,
         )
 
         if "ui_script" in scripts:
             scripts["ui_script"] = self._normalize_python_playwright(
-                scripts["ui_script"]
+                scripts["ui_script"], discovery_data
             )
             self._validate_script(scripts["ui_script"])
-            self._validate_ui_locators(
-                scripts["ui_script"], base_url, discovery_data
-            )
             settings.GENERATED_UI_SCRIPT.write_text(
                 scripts["ui_script"], encoding="utf-8"
             )
+            self._validate_ui_locators(
+                scripts["ui_script"], base_url, discovery_data
+            )
         if "api_script" in scripts:
             scripts["api_script"] = self._normalize_python_playwright(
-                scripts["api_script"]
+                scripts["api_script"], discovery_data
             )
             self._validate_script(scripts["api_script"])
             settings.GENERATED_API_SCRIPT.write_text(
@@ -46,7 +54,9 @@ class ScriptGenerator:
     def _validate_script(script):
         tree = ast.parse(script)
 
-        allowed_import_roots = {"pytest", "playwright", "random", "re"}
+        allowed_import_roots = {
+            "pytest", "playwright", "random", "re", "string",
+        }
         forbidden_calls = {"eval", "exec", "compile", "__import__"}
         forbidden_modules = {
             "os", "subprocess", "shutil", "socket", "requests",
@@ -80,7 +90,14 @@ class ScriptGenerator:
 
     @staticmethod
     def _validate_ui_locators(script, base_url, discovery_data):
-        locator_calls = ScriptGenerator._extract_locator_calls(script)
+        locator_calls = list({
+            (
+                call["method"],
+                call["value"],
+                tuple(sorted(call["kwargs"].items())),
+            ): call
+            for call in ScriptGenerator._extract_locator_calls(script)
+        }.values())
         if not locator_calls:
             return
 
@@ -96,28 +113,29 @@ class ScriptGenerator:
             browser = playwright.chromium.launch(headless=True)
             page = browser.new_page()
             try:
-                for locator_call in locator_calls:
-                    matches = []
-                    for url in urls:
-                        try:
-                            page.goto(
-                                url,
-                                wait_until="domcontentloaded",
-                                timeout=30000,
-                            )
+                matches_by_locator = {id(call): [] for call in locator_calls}
+                for url in urls:
+                    try:
+                        page.goto(
+                            url,
+                            wait_until="domcontentloaded",
+                            timeout=10000,
+                        )
+                        for locator_call in locator_calls:
                             count = ScriptGenerator._resolve_locator(
                                 page, locator_call
                             )
                             if count:
-                                matches.append((url, count))
-                        except Exception as exc:
-                            logger.debug(
-                                "Could not probe locator %s on %s: %s",
-                                locator_call["display"],
-                                url,
-                                exc,
-                            )
+                                matches_by_locator[id(locator_call)].append(
+                                    (url, count)
+                                )
+                    except Exception as exc:
+                        logger.debug(
+                            "Could not probe locators on %s: %s", url, exc
+                        )
 
+                for locator_call in locator_calls:
+                    matches = matches_by_locator[id(locator_call)]
                     if not matches:
                         failures.append(
                             f"{locator_call['display']} did not match any discovered page"
@@ -136,7 +154,7 @@ class ScriptGenerator:
             )
 
     @staticmethod
-    def _normalize_python_playwright(script):
+    def _normalize_python_playwright(script, discovery_data=None):
         tree = ast.parse(script)
 
         class PlaywrightPythonNormalizer(ast.NodeTransformer):
@@ -161,6 +179,13 @@ class ScriptGenerator:
                 node = self.generic_visit(node)
                 if (
                     isinstance(node.func, ast.Attribute)
+                    and node.func.attr == "expect"
+                    and isinstance(node.func.value, ast.Name)
+                    and node.func.value.id == "page"
+                ):
+                    node.func = ast.Name(id="expect", ctx=ast.Load())
+                if (
+                    isinstance(node.func, ast.Attribute)
                     and node.func.attr in self.locator_methods
                     and len(node.args) == 2
                     and isinstance(node.args[1], ast.Dict)
@@ -176,8 +201,109 @@ class ScriptGenerator:
                 return node
 
         normalized = PlaywrightPythonNormalizer().visit(tree)
+        if discovery_data:
+            normalized = ScriptGenerator._replace_invented_locators(
+                normalized, discovery_data
+            )
+        uses_re = any(
+            isinstance(node, ast.Name) and node.id == "re"
+            for node in ast.walk(normalized)
+        )
+        imports_re = any(
+            isinstance(node, ast.Import)
+            and any(alias.name == "re" for alias in node.names)
+            for node in normalized.body
+        )
+        if uses_re and not imports_re:
+            normalized.body.insert(0, ast.Import(names=[ast.alias(name="re")]))
         ast.fix_missing_locations(normalized)
         return ast.unparse(normalized)
+
+    @staticmethod
+    def _replace_invented_locators(tree, discovery_data):
+        dictionary = discovery_data.get("locator_dictionary", {})
+        by_value = {
+            entry.get("value"): entry
+            for entry in dictionary.values()
+            if entry.get("method") == "locator"
+        }
+        by_key = {
+            key: entry for key, entry in dictionary.items()
+        }
+        links = {}
+        for page in discovery_data.get("ui_pages", []):
+            for link in page.get("links", []):
+                href = link.get("href", "").split(";jsessionid", 1)[0]
+                text = link.get("text", "").strip()
+                if href and text:
+                    links[href.rsplit("/", 1)[-1]] = text
+
+        class LocatorRepair(ast.NodeTransformer):
+            def visit_Call(self, node):
+                node = self.generic_visit(node)
+                if (
+                    isinstance(node.func, ast.Attribute)
+                    and node.func.attr == "locator"
+                    and node.args
+                    and isinstance(node.args[0], ast.Constant)
+                    and isinstance(node.args[0].value, str)
+                ):
+                    selector = node.args[0].value
+                    entry = by_value.get(selector)
+                    if not entry:
+                        for prefix in ("input[name='", "input[id='"):
+                            if selector.startswith(prefix) and selector.endswith("']"):
+                                field = selector[len(prefix):-2]
+                                entry = by_key.get(field)
+                                if not entry:
+                                    entry = next(
+                                        (
+                                            candidate
+                                            for candidate in by_key.values()
+                                            if field in candidate.get("value", "")
+                                        ),
+                                        None,
+                                    )
+                                break
+                    if entry:
+                        node.args[0] = ast.Constant(value=entry["value"])
+                    elif selector.startswith("input[value='") and selector.endswith("']"):
+                        button_name = selector[len("input[value='"):-2]
+                        entry = by_key.get(f"button:{button_name}")
+                        if entry and entry.get("method") == "get_by_role":
+                            node.func = ast.Attribute(
+                                value=ast.Name(id="page", ctx=ast.Load()),
+                                attr="get_by_role",
+                                ctx=ast.Load(),
+                            )
+                            node.args = [ast.Constant(value="button")]
+                            node.keywords = [
+                                ast.keyword(
+                                    arg="name", value=ast.Constant(value=button_name)
+                                ),
+                                ast.keyword(arg="exact", value=ast.Constant(value=True)),
+                            ]
+                    elif selector.startswith("a[href='") and selector.endswith("']"):
+                        target = selector[len("a[href='"):-2]
+                        link_text = links.get(target)
+                        if link_text:
+                            node.func = ast.Attribute(
+                                value=ast.Name(id="page", ctx=ast.Load()),
+                                attr="get_by_role",
+                                ctx=ast.Load(),
+                            )
+                            node.args = [
+                                ast.Constant(value="link"),
+                            ]
+                            node.keywords = [
+                                ast.keyword(
+                                    arg="name", value=ast.Constant(value=link_text)
+                                ),
+                                ast.keyword(arg="exact", value=ast.Constant(value=True)),
+                            ]
+                return node
+
+        return LocatorRepair().visit(tree)
 
     @staticmethod
     def _extract_locator_calls(script):

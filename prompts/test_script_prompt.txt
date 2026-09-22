@@ -8,6 +8,9 @@ WEBSITE BASE URL:
 REQUESTED TESTING MODE:
 {testing_mode}
 
+PREVIOUS EXECUTION FEEDBACK:
+{repair_feedback}
+
 APPROVED TEST CASES:
 {approved_test_cases}
 
@@ -22,6 +25,8 @@ Requirements for UI tests:
 8. Use only locators from discovery_data.locator_dictionary.
 9. Copy the dictionary entry's method, value, and kwargs exactly; do not change
     case, punctuation, whitespace, selector syntax, or accessible names.
+    For form fields, prefer the dictionary's CSS/name locator over inventing a
+    get_by_role textbox name from nearby label text.
 10. This is Python Playwright: pass kwargs as Python keyword arguments, for
     example page.get_by_role("link", name="Register", exact=True). Never pass
     the kwargs dictionary as a second positional argument.
@@ -34,6 +39,15 @@ Requirements for UI tests:
 15. Use explicit assertions.
 16. Keep tests independent.
 17. Use the supplied base URL where appropriate.
+18. ParaBank may append ;jsessionid=<value> to URLs. For URL assertions, use
+    re.compile with a pattern that allows the optional session-id suffix.
+19. If a discovered link appears in both the header and footer, scope it to
+    the appropriate discovered container or use the first matching element.
+20. Never write page.expect(...). Import expect from playwright.sync_api and
+    write expect(locator).to_be_visible(), expect(locator).to_contain_text(),
+    or expect(page).to_have_url().
+21. When previous execution feedback is provided, repair only the failing test
+    cases while preserving the complete executable script format.
 
 Requirements for API tests:
 
@@ -52,7 +66,8 @@ Requirements for API tests:
 Security requirements:
 
 1. Do not import os, subprocess, shutil, socket, requests, urllib,
-   pathlib, sys, or other external modules.
+   pathlib, sys, or other external modules. The standard-library modules
+   random, re, and string are allowed.
 2. Do not use eval, exec, compile, __import__, or dynamic code execution.
 3. Do not read or write local files.
 4. Do not execute shell commands.

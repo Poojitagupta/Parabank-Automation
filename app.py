@@ -169,6 +169,21 @@ def main():
 
     print("\nRunning generated tests automatically...")
     return_code = test_runner.run(testing_mode)
+    repair_attempts = 0
+    while return_code != 0 and repair_attempts < 2:
+        repair_attempts += 1
+        print(
+            f"\nTest failures detected. Regenerating failing scripts "
+            f"(repair attempt {repair_attempts}/2)..."
+        )
+        script_generator.generate(
+            base_url=base_url,
+            test_cases=approved_test_cases,
+            discovery_data=discovery,
+            testing_mode=testing_mode,
+            repair_feedback=test_runner.last_output,
+        )
+        return_code = test_runner.run(testing_mode)
 
     print("\n" + "=" * 70)
     if return_code == 0:

@@ -10,6 +10,9 @@ logger = logging.getLogger(__name__)
 
 class TestRunner:
 
+    def __init__(self):
+        self.last_output = ""
+
     def run(self, testing_mode: str) -> int:
         command = [
             sys.executable,
@@ -39,6 +42,11 @@ class TestRunner:
             command,
             cwd=settings.PROJECT_ROOT,
             timeout=600,
+            capture_output=True,
+            text=True,
         )
+
+        self.last_output = f"{result.stdout}\n{result.stderr}"
+        print(self.last_output)
 
         return result.returncode
