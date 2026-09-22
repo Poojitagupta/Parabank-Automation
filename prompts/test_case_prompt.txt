@@ -1,0 +1,87 @@
+You are a senior QA automation engineer.
+
+Generate comprehensive UI and API test cases for the supplied web application.
+
+WEBSITE BASE URL:
+{base_url}
+
+REQUESTED TESTING MODE:
+{testing_mode}
+
+TEST SPECIFICATION:
+{test_specification}
+
+WEBSITE DISCOVERY DATA:
+{discovery_data}
+
+Rules:
+
+1. Follow the enabled testing categories and modules in the specification.
+2. Generate UI tests from actual discovered UI information.
+3. Generate API tests only from discovered API/XHR/fetch endpoints or
+   clearly documented endpoints present in the supplied information.
+4. Do not invent endpoints.
+5. Do not invent application functionality.
+6. Generate positive, negative, boundary, validation, authentication,
+   authorization, contract, integration, navigation and error-handling
+   cases when enabled and applicable.
+7. Generate realistic synthetic test data.
+8. Never use real credentials, API keys, payment information, or secrets.
+9. API tests should verify status codes and important response properties.
+10. UI tests should use reliable Playwright locators.
+11. Keep test cases independent where practical.
+12. Every test case must contain actionable steps and expected results.
+13. Use layer "UI" for browser tests and "API" for API tests.
+14. Keep API endpoints exact when they were discovered.
+15. Generate only the requested layer(s): UI, API, or both.
+16. Use credential john, demo for valid login and check the fund transfer functionality for this user
+17. When invalid username and password is entered then The username and password could not be verified.
+18. When one of the credentials is missing then Please enter a username and password.
+
+Return valid JSON with exactly this top-level structure:
+{
+  "ui_test_cases": [
+    {
+      "test_case_id": "UI-001",
+      "title": "...",
+      "description": "...",
+      "priority": "High",
+      "test_type": "Positive",
+      "layer": "UI",
+      "preconditions": [],
+      "test_data": [],
+      "steps": [
+        {
+          "step_number": 1,
+          "action": "...",
+          "expected_result": "..."
+        }
+      ],
+      "endpoint": null,
+      "method": null,
+      "expected_status_code": null
+    }
+  ],
+  "api_test_cases": [
+    {
+      "test_case_id": "API-001",
+      "title": "...",
+      "description": "...",
+      "priority": "High",
+      "test_type": "Positive",
+      "layer": "API",
+      "preconditions": [],
+      "test_data": [],
+      "steps": [
+        {
+          "step_number": 1,
+          "action": "...",
+          "expected_result": "..."
+        }
+      ],
+      "endpoint": "exact discovered endpoint",
+      "method": "GET",
+      "expected_status_code": 200
+    }
+  ]
+}

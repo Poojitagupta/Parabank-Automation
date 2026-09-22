@@ -1,0 +1,165 @@
+application:
+  name: Generic Web Application
+  base_url: https://parabank.parasoft.com/parabank
+
+discovery:
+  max_pages: 8
+  capture_api_calls: true
+  same_origin_only: true
+
+testing_scope:
+  functional:
+    enabled: true
+
+  positive_testing:
+    enabled: true
+
+  negative_testing:
+    enabled: true
+
+  boundary_testing:
+    enabled: true
+
+  validation_testing:
+    enabled: true
+
+  navigation_testing:
+    enabled: true
+
+  error_handling:
+    enabled: true
+
+  authentication:
+    enabled: true
+
+  authorization:
+    enabled: true
+
+  api_testing:
+    enabled: true
+
+  api_contract_testing:
+    enabled: true
+
+  api_error_testing:
+    enabled: true
+
+
+modules:
+
+  - name: Registration
+    enabled: true
+    test_aspects:
+      - valid registration
+      - required field validation
+      - invalid field values
+      - duplicate registration
+      - boundary values
+
+  - name: Authentication
+    enabled: true
+    test_aspects:
+      - valid login
+      - invalid username
+      - invalid password
+      - empty username
+      - empty password
+      - both credentials empty
+      - logout
+      - session behavior
+
+  - name: Account Management
+    enabled: true
+    test_aspects:
+      - account creation
+      - account selection
+      - account details
+      - balance display
+      - invalid input handling
+
+  - name: Transactions
+    enabled: true
+    test_aspects:
+      - valid transaction
+      - zero amount
+      - negative amount
+      - non-numeric amount
+      - empty amount
+      - insufficient balance
+      - same source and destination
+      - transaction result validation
+
+  - name: Navigation
+    enabled: true
+    test_aspects:
+      - important navigation links
+      - broken navigation
+      - page availability
+      - back and forward navigation
+
+api_testing:
+  enabled: true
+
+  test_aspects:
+    - GET success responses
+    - POST success responses
+    - PUT success responses
+    - DELETE success responses
+    - required parameters
+    - invalid parameters
+    - missing parameters
+    - invalid identifiers
+    - boundary values
+    - response status codes
+    - response body structure
+    - important response fields
+    - content type
+    - unsupported methods
+    - authentication failures
+    - authorization failures
+    - server error handling
+
+  status_code_validation:
+    enabled: true
+
+  response_schema_validation:
+    enabled: true
+
+  negative_testing:
+    enabled: true
+
+
+test_data:
+  generate_positive_data: true
+  generate_negative_data: true
+  generate_boundary_data: true
+
+  do_not_use:
+    - real passwords
+    - real API keys
+    - real access tokens
+    - production credentials
+    - payment card numbers
+    - personal information
+
+
+automation:
+  framework: Playwright
+  language: Python
+  test_runner: pytest
+
+  ui:
+    enabled: true
+    browser: chromium
+    headed: true
+
+  api:
+    enabled: true
+    framework: Playwright APIRequestContext
+
+
+output:
+  generate_test_cases: true
+  generate_ui_script: true
+  generate_api_script: true
+  generate_html_report: true

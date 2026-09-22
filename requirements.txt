@@ -1,0 +1,7 @@
+google-genai
+python-dotenv
+PyYAML
+pytest
+pytest-playwright
+pytest-html
+mcp

@@ -1,0 +1,46 @@
+# Local secrets and environment files
+.env
+.env.*
+!.env.example
+
+# Python environments and caches
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Playwright and MCP runtime artifacts
+.playwright-mcp/
+test-results/
+playwright-report/
+
+# Application-generated output
+logs/*
+reports/*
+generated/*
+data/test_cases.json
+data/test_data.json
+data/website_discovery.json
+
+# Keep directory placeholders versioned when present
+!logs/.gitkeep
+!reports/.gitkeep
+!generated/.gitkeep
+!data/.gitkeep
+
+# Editor and OS files
+.idea/
+.vscode/*
+!.vscode/mcp.json
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
