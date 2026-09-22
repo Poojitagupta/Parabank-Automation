@@ -19,7 +19,7 @@ Rules:
 1. Follow the enabled testing categories and modules in the specification.
 2. Generate UI tests from actual discovered UI information.
 3. Generate API tests only from discovered API/XHR/fetch endpoints or
-   clearly documented endpoints present in the supplied information.
+  clearly documented OpenAPI endpoints present in the supplied information.
 4. Do not invent endpoints.
 5. Do not invent application functionality.
 6. Generate positive, negative, boundary, validation, authentication,
@@ -33,6 +33,13 @@ Rules:
 12. Every test case must contain actionable steps and expected results.
 13. Use layer "UI" for browser tests and "API" for API tests.
 14. Keep API endpoints exact when they were discovered.
+  For OpenAPI endpoints, preserve the documented HTTP method, path,
+  operationId, required parameters, request body schema, and response
+  status/content definitions. Use realistic placeholder IDs only where the
+  contract requires path or query parameters.
+  For dependent ParaBank API tests, do not invent customer or account IDs such
+  as 12345. Use the documented john/demo login response to obtain the customer
+  ID, then obtain usable account IDs from the customer accounts operation.
 15. Generate only the requested layer(s): UI, API, or both.
 16. Use credential john, demo for valid login and check the fund transfer functionality for this user
 17. When invalid username and password is entered then The username and password could not be verified.

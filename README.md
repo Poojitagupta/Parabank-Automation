@@ -1,3 +1,20 @@
+# ParaBank AI Automation
+
+## API testing from OpenAPI
+
+The repository uses `config/openapi.yaml` as the documented ParaBank API
+contract. It contains the `/parabank/services/bank` server and 27 operations.
+The application merges those operations into discovery data before generating
+API test cases and Playwright `APIRequestContext` scripts.
+
+To generate and run API tests, choose API testing mode when starting the app:
+
+```powershell
+python app.py
+```
+
+The contract path can be overridden with `OPENAPI_SPEC_FILE` when using a
+different OpenAPI document.
 # AI Test Automation Generator
 
 A developer-style GenAI QA framework that:

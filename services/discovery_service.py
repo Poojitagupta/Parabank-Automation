@@ -4,6 +4,7 @@ import shutil
 
 from config import settings
 from services.website_analyzer import WebsiteAnalyzer
+from services.openapi_loader import OpenApiLoader
 
 
 logger = logging.getLogger(__name__)
@@ -36,7 +37,7 @@ class DiscoveryService:
                     WebsiteAnalyzer._pretty_json(discovery),
                     encoding="utf-8",
                 )
-                return discovery
+                return self._add_openapi_data(discovery, base_url)
             except Exception as exc:
                 if engine == "mcp":
                     raise RuntimeError(
@@ -50,6 +51,29 @@ class DiscoveryService:
 
         discovery = self.python_analyzer.analyze(base_url, specification)
         discovery["discovery_engine"] = "python"
+        return self._add_openapi_data(discovery, base_url)
+
+    @staticmethod
+    def _add_openapi_data(discovery: dict, base_url: str) -> dict:
+        contract = OpenApiLoader.load(settings.OPENAPI_SPEC_FILE, base_url)
+        if not contract:
+            return discovery
+
+        documented = contract["endpoints"]
+        observed = discovery.get("api_endpoints", [])
+        observed_keys = {
+            (item.get("method"), item.get("url")) for item in observed
+        }
+        for endpoint in documented:
+            key = (endpoint["method"], endpoint["url"])
+            if key not in observed_keys:
+                observed.append(endpoint)
+        discovery["api_endpoints"] = observed
+        discovery["openapi"] = contract
+        settings.DISCOVERY_FILE.write_text(
+            WebsiteAnalyzer._pretty_json(discovery),
+            encoding="utf-8",
+        )
         return discovery
 
     @staticmethod

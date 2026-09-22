@@ -15,6 +15,9 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 DISCOVERY_ENGINE = os.getenv("DISCOVERY_ENGINE", "auto").lower()
 MCP_SERVER_COMMAND = os.getenv("MCP_SERVER_COMMAND", "npx")
 MCP_SERVER_PACKAGE = os.getenv("MCP_SERVER_PACKAGE", "@playwright/mcp@latest")
+OPENAPI_SPEC_FILE = Path(
+    os.getenv("OPENAPI_SPEC_FILE", PROJECT_ROOT / "config" / "openapi.yaml")
+)
 
 
 # Project paths

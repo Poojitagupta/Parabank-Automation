@@ -155,6 +155,7 @@ class ScriptGenerator:
 
     @staticmethod
     def _normalize_python_playwright(script, discovery_data=None):
+        script = ScriptGenerator._clean_generated_script(script)
         tree = ast.parse(script)
 
         class PlaywrightPythonNormalizer(ast.NodeTransformer):
@@ -177,6 +178,34 @@ class ScriptGenerator:
 
             def visit_Call(self, node):
                 node = self.generic_visit(node)
+                if (
+                    isinstance(node.func, ast.Attribute)
+                    and node.func.attr == "new_context"
+                    and node.keywords
+                ):
+                    for keyword in node.keywords:
+                        if (
+                            keyword.arg == "base_url"
+                            and isinstance(keyword.value, ast.Constant)
+                            and isinstance(keyword.value.value, str)
+                            and keyword.value.value
+                            and not keyword.value.value.endswith("/")
+                        ):
+                            keyword.value = ast.Constant(
+                                value=keyword.value.value + "/"
+                            )
+                if (
+                    isinstance(node.func, ast.Attribute)
+                    and node.func.attr in {
+                        "get", "post", "put", "patch", "delete", "head",
+                        "fetch",
+                    }
+                    and node.args
+                    and isinstance(node.args[0], ast.Constant)
+                    and isinstance(node.args[0].value, str)
+                    and node.args[0].value.startswith("/")
+                ):
+                    node.args[0] = ast.Constant(value=node.args[0].value.lstrip("/"))
                 if (
                     isinstance(node.func, ast.Attribute)
                     and node.func.attr == "expect"
@@ -218,6 +247,31 @@ class ScriptGenerator:
             normalized.body.insert(0, ast.Import(names=[ast.alias(name="re")]))
         ast.fix_missing_locations(normalized)
         return ast.unparse(normalized)
+
+    @staticmethod
+    def _clean_generated_script(script):
+        lines = script.strip().splitlines()
+        cleaned = []
+        in_diff = any(
+            line.startswith(("--- ", "+++ ", "@@"))
+            or line.startswith(("+def ", "-def "))
+            for line in lines
+        )
+        has_added_lines = any(
+            line.startswith("+") and not line.startswith("+++")
+            for line in lines
+        )
+
+        for line in lines:
+            if line.startswith("```") or line.startswith(("--- ", "+++ ", "@@")):
+                continue
+            if in_diff and has_added_lines and line.startswith("-"):
+                continue
+            if in_diff and line.startswith(("+", "-")):
+                line = line[1:]
+            cleaned.append(line)
+
+        return "\n".join(cleaned).strip()
 
     @staticmethod
     def _replace_invented_locators(tree, discovery_data):

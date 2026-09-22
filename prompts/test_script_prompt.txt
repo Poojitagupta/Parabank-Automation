@@ -60,8 +60,19 @@ Requirements for API tests:
 7. Verify status codes.
 8. Verify important response properties when supported by the test case.
 9. Use only discovered/documented endpoints from the approved cases.
+    For OpenAPI endpoints, use the documented API base URL and exact HTTP
+    method/path. When APIRequestContext.base_url includes a path such as
+    /parabank/services/bank, configure it with a trailing slash and pass
+    endpoint paths without a leading slash so Playwright preserves that base
+    path. Substitute only the parameter values supplied by the test case.
 10. Do not use requests, urllib, curl, or other HTTP libraries.
 11. Do not use real credentials or secrets.
+12. Do not use arbitrary customer or account IDs such as 12345 or 54321 for
+    dependent ParaBank API tests. Use john/demo for the documented login, read
+    the returned customer ID, and obtain account IDs from the customer accounts
+    response before calling account, deposit, withdrawal, transfer, loan, or
+    transaction operations. Keep independent negative-ID tests explicitly
+    negative and assert the documented error response.
 
 Security requirements:
 
