@@ -44,6 +44,8 @@ Rules:
 16. Use credential john, demo for valid login and check the fund transfer functionality for this user
 17. When invalid username and password is entered then The username and password could not be verified.
 18. When one of the credentials is missing then Please enter a username and password.
+19. Include all edge cases for testing
+20. Test transfer funds, bill payment functionality
 
 Return valid JSON with exactly this top-level structure:
 {

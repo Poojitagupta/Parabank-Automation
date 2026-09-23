@@ -230,8 +230,15 @@ class ScriptGenerator:
                 return node
 
         normalized = PlaywrightPythonNormalizer().visit(tree)
+        normalized = ScriptGenerator._sanitize_playwright_imports(normalized)
+        normalized, uses_safe_json = ScriptGenerator._sanitize_json_parsing(
+            normalized
+        )
         if discovery_data:
             normalized = ScriptGenerator._replace_invented_locators(
+                normalized, discovery_data
+            )
+            normalized = ScriptGenerator._repair_duplicate_role_locators(
                 normalized, discovery_data
             )
         uses_re = any(
@@ -245,8 +252,166 @@ class ScriptGenerator:
         )
         if uses_re and not imports_re:
             normalized.body.insert(0, ast.Import(names=[ast.alias(name="re")]))
+        if uses_safe_json:
+            helper = ast.parse(
+                """def _parse_json_response(response):
+    content_type = response.headers.get('content-type', '').lower()
+    if 'json' not in content_type:
+        return {}
+    return response.json()
+"""
+            ).body[0]
+            normalized.body.insert(0, helper)
         ast.fix_missing_locations(normalized)
         return ast.unparse(normalized)
+
+    @staticmethod
+    def _sanitize_json_parsing(tree):
+        uses_safe_json = False
+
+        class JsonCallRepair(ast.NodeTransformer):
+            def visit_Call(self, node):
+                nonlocal uses_safe_json
+                node = self.generic_visit(node)
+                if (
+                    isinstance(node.func, ast.Attribute)
+                    and node.func.attr == "json"
+                    and not node.args
+                    and not node.keywords
+                ):
+                    uses_safe_json = True
+                    return ast.Call(
+                        func=ast.Name(id="_parse_json_response", ctx=ast.Load()),
+                        args=[node.func.value],
+                        keywords=[],
+                    )
+                return node
+
+        return JsonCallRepair().visit(tree), uses_safe_json
+
+    @staticmethod
+    def _sanitize_playwright_imports(tree):
+        valid_names = {
+            "expect", "Page", "Playwright", "APIRequestContext",
+            "sync_playwright",
+        }
+        uses_expect = any(
+            isinstance(node, ast.Name) and node.id == "expect"
+            for node in ast.walk(tree)
+        )
+        uses_sync_playwright = any(
+            isinstance(node, ast.Name) and node.id == "sync_playwright"
+            for node in ast.walk(tree)
+        )
+        expect_imported = False
+        sync_playwright_imported = False
+
+        for node in tree.body:
+            if not isinstance(node, ast.ImportFrom):
+                continue
+            if node.module != "playwright.sync_api":
+                continue
+
+            node.names = [
+                alias for alias in node.names
+                if alias.name in valid_names and alias.name != "page"
+            ]
+            expect_imported = any(alias.name == "expect" for alias in node.names)
+            sync_playwright_imported = any(
+                alias.name == "sync_playwright" for alias in node.names
+            )
+
+        if uses_expect and not expect_imported:
+            tree.body.insert(
+                0,
+                ast.ImportFrom(
+                    module="playwright.sync_api",
+                    names=[ast.alias(name="expect")],
+                    level=0,
+                ),
+            )
+
+        if uses_sync_playwright and not sync_playwright_imported:
+            tree.body.insert(
+                0,
+                ast.ImportFrom(
+                    module="playwright.sync_api",
+                    names=[ast.alias(name="sync_playwright")],
+                    level=0,
+                ),
+            )
+
+        tree.body = [
+            node for node in tree.body
+            if not (
+                isinstance(node, ast.ImportFrom)
+                and node.module == "playwright.sync_api"
+                and not node.names
+            )
+        ]
+        return tree
+
+    @staticmethod
+    def _repair_duplicate_role_locators(tree, discovery_data):
+        duplicate_names = set()
+        for page in discovery_data.get("ui_pages", []):
+            counts = {}
+            for link in page.get("links", []):
+                name = link.get("text", "").strip()
+                if name:
+                    counts[("link", name)] = counts.get(("link", name), 0) + 1
+            for button in page.get("buttons", []):
+                name = str(button).strip()
+                if name:
+                    counts[("button", name)] = counts.get(("button", name), 0) + 1
+            duplicate_names.update(
+                key for key, count in counts.items() if count > 1
+            )
+
+        class DuplicateRoleRepair(ast.NodeTransformer):
+            def visit_Call(self, node):
+                node = self.generic_visit(node)
+                if (
+                    isinstance(node.func, ast.Attribute)
+                    and node.func.attr == "get_by_role"
+                    and node.args
+                    and isinstance(node.args[0], ast.Constant)
+                    and isinstance(node.args[0].value, str)
+                ):
+                    role = node.args[0].value
+                    name = next(
+                        (
+                            keyword.value.value
+                            for keyword in node.keywords
+                            if keyword.arg == "name"
+                            and isinstance(keyword.value, ast.Constant)
+                            and isinstance(keyword.value.value, str)
+                        ),
+                        None,
+                    )
+                    if name is not None:
+                        exact = next(
+                            (
+                                keyword for keyword in node.keywords
+                                if keyword.arg == "exact"
+                            ),
+                            None,
+                        )
+                        if exact is None:
+                            node.keywords.append(
+                                ast.keyword(
+                                    arg="exact", value=ast.Constant(value=True)
+                                )
+                            )
+                        if (role, name) in duplicate_names:
+                            return ast.Attribute(
+                                value=node,
+                                attr="first",
+                                ctx=ast.Load(),
+                            )
+                return node
+
+        return DuplicateRoleRepair().visit(tree)
 
     @staticmethod
     def _clean_generated_script(script):

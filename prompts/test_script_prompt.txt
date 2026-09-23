@@ -43,7 +43,8 @@ Requirements for UI tests:
     re.compile with a pattern that allows the optional session-id suffix.
 19. If a discovered link appears in both the header and footer, scope it to
     the appropriate discovered container or use the first matching element.
-20. Never write page.expect(...). Import expect from playwright.sync_api and
+20. Never import page from playwright.sync_api; page is a pytest fixture.
+    Never write page.expect(...). Import expect from playwright.sync_api and
     write expect(locator).to_be_visible(), expect(locator).to_contain_text(),
     or expect(page).to_have_url().
 21. When previous execution feedback is provided, repair only the failing test
@@ -59,6 +60,8 @@ Requirements for API tests:
 6. Close the API context after use.
 7. Verify status codes.
 8. Verify important response properties when supported by the test case.
+    Check the response status before parsing the body. Parse JSON only when the
+    response content type is JSON; the service may return XML or HTML errors.
 9. Use only discovered/documented endpoints from the approved cases.
     For OpenAPI endpoints, use the documented API base URL and exact HTTP
     method/path. When APIRequestContext.base_url includes a path such as
@@ -73,6 +76,8 @@ Requirements for API tests:
     response before calling account, deposit, withdrawal, transfer, loan, or
     transaction operations. Keep independent negative-ID tests explicitly
     negative and assert the documented error response.
+13. ParaBank invalid login currently returns HTTP 400, not 401. Assert 400 for
+    that documented negative login case unless the live contract data says otherwise.
 
 Security requirements:
 
