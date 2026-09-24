@@ -25,10 +25,8 @@ playwright-report/
 # Application-generated output
 logs/*
 reports/*
-generated/*
-data/test_cases.json
-data/test_data.json
-data/website_discovery.json
+generated_scripts/*
+artifacts/*
 
 # Keep directory placeholders versioned when present
 !logs/.gitkeep

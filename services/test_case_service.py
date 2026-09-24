@@ -1,7 +1,7 @@
 import json
 import logging
 
-from config import settings
+from constants.constants import TEST_CASE_FILE, TEST_DATA_FILE
 
 
 logger = logging.getLogger(__name__)
@@ -22,11 +22,11 @@ class TestCaseService:
         self.specification = specification
 
     def save(self, test_cases):
-        settings.TEST_CASE_FILE.write_text(
+        TEST_CASE_FILE.write_text(
             json.dumps(test_cases, indent=2, ensure_ascii=False),
             encoding="utf-8",
         )
-        settings.TEST_DATA_FILE.write_text(
+        TEST_DATA_FILE.write_text(
             json.dumps(self._extract_test_data(test_cases), indent=2, ensure_ascii=False),
             encoding="utf-8",
         )

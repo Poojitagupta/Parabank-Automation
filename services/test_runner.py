@@ -3,7 +3,7 @@ import re
 import subprocess
 import sys
 
-from config import settings
+from constants.constants import GENERATED_API_SCRIPT, GENERATED_UI_SCRIPT, PROJECT_ROOT, REPORT_FILE
 
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ class TestRunner:
             "-v",
             "-s",
             "--html",
-            str(settings.REPORT_FILE),
+            str(REPORT_FILE),
             "--self-contained-html",
         ]
 
@@ -32,12 +32,12 @@ class TestRunner:
         else:
             if "UI" in testing_mode:
                 command.extend([
-                    str(settings.GENERATED_UI_SCRIPT),
+                    str(GENERATED_UI_SCRIPT),
                     "--browser", "chromium",
                     "--headed",
                 ])
             if "API" in testing_mode:
-                command.append(str(settings.GENERATED_API_SCRIPT))
+                command.append(str(GENERATED_API_SCRIPT))
 
         logger.info(
             "Running generated %s tests.", testing_mode
@@ -45,7 +45,7 @@ class TestRunner:
 
         result = subprocess.run(
             command,
-            cwd=settings.PROJECT_ROOT,
+            cwd=PROJECT_ROOT,
             timeout=600,
             capture_output=True,
             text=True,

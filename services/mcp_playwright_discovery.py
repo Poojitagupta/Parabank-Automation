@@ -5,7 +5,7 @@ from urllib.parse import urljoin, urlparse
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-from config import settings
+from constants.constants import MCP_SERVER_COMMAND, MCP_SERVER_PACKAGE
 
 
 logger = logging.getLogger(__name__)
@@ -16,8 +16,8 @@ class McpPlaywrightDiscovery:
 
     async def analyze(self, base_url: str, specification: dict) -> dict:
         server = StdioServerParameters(
-            command=settings.MCP_SERVER_COMMAND,
-            args=["-y", settings.MCP_SERVER_PACKAGE],
+            command=MCP_SERVER_COMMAND,
+            args=["-y", MCP_SERVER_PACKAGE],
         )
 
         async with stdio_client(server) as (read_stream, write_stream):

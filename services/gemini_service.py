@@ -3,22 +3,22 @@ import json
 from google import genai
 from google.genai import types
 
-from config import settings
+from constants.constants import GEMINI_API_KEY, GEMINI_MODEL, PROMPT_DIR
 
 
 class GeminiService:
     def __init__(self):
-        if not settings.GEMINI_API_KEY:
+        if not GEMINI_API_KEY:
             raise ValueError(
                 "GEMINI_API_KEY is not set. "
                 "Please add it to the .env file."
             )
 
-        self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
-        self.model = settings.GEMINI_MODEL
+        self.client = genai.Client(api_key=GEMINI_API_KEY)
+        self.model = GEMINI_MODEL
 
     def _read_prompt(self, filename):
-        return (settings.PROMPT_DIR / filename).read_text(encoding="utf-8")
+        return (PROMPT_DIR / filename).read_text(encoding="utf-8")
 
     def _generate_json(self, prompt):
         response = self.client.models.generate_content(
