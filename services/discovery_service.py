@@ -2,7 +2,12 @@ import asyncio
 import logging
 import shutil
 
-from config import settings
+from constants.constants import (
+    DISCOVERY_ENGINE,
+    DISCOVERY_FILE,
+    MCP_SERVER_COMMAND,
+    OPENAPI_SPEC_FILE,
+)
 from services.website_analyzer import WebsiteAnalyzer
 from services.openapi_loader import OpenApiLoader
 
@@ -17,7 +22,7 @@ class DiscoveryService:
         self.python_analyzer = WebsiteAnalyzer()
 
     def analyze(self, base_url: str, specification: dict) -> dict:
-        engine = settings.DISCOVERY_ENGINE
+        engine = DISCOVERY_ENGINE
         if engine not in {"auto", "mcp", "python"}:
             raise ValueError(
                 "DISCOVERY_ENGINE must be one of: auto, mcp, python"
@@ -33,7 +38,7 @@ class DiscoveryService:
                     McpPlaywrightDiscovery().analyze(base_url, specification)
                 )
                 discovery["discovery_engine"] = "mcp"
-                settings.DISCOVERY_FILE.write_text(
+                DISCOVERY_FILE.write_text(
                     WebsiteAnalyzer._pretty_json(discovery),
                     encoding="utf-8",
                 )
@@ -55,7 +60,7 @@ class DiscoveryService:
 
     @staticmethod
     def _add_openapi_data(discovery: dict, base_url: str) -> dict:
-        contract = OpenApiLoader.load(settings.OPENAPI_SPEC_FILE, base_url)
+        contract = OpenApiLoader.load(OPENAPI_SPEC_FILE, base_url)
         if not contract:
             return discovery
 
@@ -70,7 +75,7 @@ class DiscoveryService:
                 observed.append(endpoint)
         discovery["api_endpoints"] = observed
         discovery["openapi"] = contract
-        settings.DISCOVERY_FILE.write_text(
+        DISCOVERY_FILE.write_text(
             WebsiteAnalyzer._pretty_json(discovery),
             encoding="utf-8",
         )
@@ -78,4 +83,4 @@ class DiscoveryService:
 
     @staticmethod
     def _mcp_command_available() -> bool:
-        return shutil.which(settings.MCP_SERVER_COMMAND) is not None
+        return shutil.which(MCP_SERVER_COMMAND) is not None

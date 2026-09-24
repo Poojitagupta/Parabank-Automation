@@ -1,12 +1,12 @@
 import yaml
 
-from config import settings
+from constants.constants import TEST_SPECIFICATION_FILE
 
 
 class SpecificationLoader:
     @staticmethod
     def load():
-        with settings.TEST_SPECIFICATION_FILE.open(
+        with TEST_SPECIFICATION_FILE.open(
             "r",
             encoding="utf-8",
         ) as file:

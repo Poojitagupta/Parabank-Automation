@@ -3,7 +3,7 @@ from urllib.parse import urlparse
 
 from playwright.sync_api import sync_playwright
 
-from config import settings
+from constants.constants import DISCOVERY_FILE
 
 
 logger = logging.getLogger(__name__)
@@ -95,7 +95,7 @@ class WebsiteAnalyzer:
             "api_endpoints": list(api_endpoints.values()),
         }
 
-        settings.DISCOVERY_FILE.write_text(
+        DISCOVERY_FILE.write_text(
             self._pretty_json(result),
             encoding="utf-8",
         )

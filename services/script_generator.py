@@ -3,7 +3,7 @@ import logging
 
 from playwright.sync_api import sync_playwright
 
-from config import settings
+from constants.constants import GENERATED_API_SCRIPT, GENERATED_UI_SCRIPT
 from services.gemini_service import GeminiService
 
 
@@ -35,7 +35,7 @@ class ScriptGenerator:
                 scripts["ui_script"], discovery_data
             )
             self._validate_script(scripts["ui_script"])
-            settings.GENERATED_UI_SCRIPT.write_text(
+            GENERATED_UI_SCRIPT.write_text(
                 scripts["ui_script"], encoding="utf-8"
             )
             self._validate_ui_locators(
@@ -46,7 +46,7 @@ class ScriptGenerator:
                 scripts["api_script"], discovery_data
             )
             self._validate_script(scripts["api_script"])
-            settings.GENERATED_API_SCRIPT.write_text(
+            GENERATED_API_SCRIPT.write_text(
                 scripts["api_script"], encoding="utf-8"
             )
 
