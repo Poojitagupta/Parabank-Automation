@@ -82,6 +82,19 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
+Install the pre-commit hooks:
+
+```powershell
+pip install pre-commit
+pre-commit install
+```
+
+Run the hooks against all tracked files:
+
+```powershell
+pre-commit run --all-files
+```
+
 Install Chromium:
 
 ```powershell
